@@ -38,25 +38,34 @@ A real-time notification microservice built with Node.js, Express, PostgreSQL, a
 ```bash
 git clone https://github.com/your-username/node-notification-service.git
 cd node-notification-service
-
+```
 
 ### 2. Install Dependencies
 
+```bash
 npm install
+```
 
 ### 3. Configure Environment Variables
 
 PORT=4000
-DATABASE_URL=postgresql://username:password@localhost:5432/your_db
+DB_HOST=your_host
+DB_PORT=your_port
+DB_USER=user
+DB_PASSWORD=your_poassword
+DB_NAME=your_db_name
 
 ### 4. Run the Server
 
+```bash
 node src/index.js
+```
 
 
 ### 🔌 API
 
-POST /notify
+//for Laraval
+POST/notify
 {
   "id": "uuid",
   "notifiable_id": 4,
