@@ -41,7 +41,7 @@ io.on('connection', (socket) => {
 });
 
 // Receive notification and broadcast
-app.post('/notify', async (req, res) => {
+app.post('/notification', async (req, res) => {
   try {
     const { id, notifiable_id, notifiable_type, type, data } = req.body;
 
@@ -66,7 +66,7 @@ app.post('/notify', async (req, res) => {
 
     res.status(201).json({ message: 'Notification stored and emitted' });
   } catch (err) {
-    console.error('Notify error:', err);
+    console.error('Notification error:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
