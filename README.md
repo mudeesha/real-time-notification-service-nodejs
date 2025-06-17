@@ -25,7 +25,7 @@ A real-time notification microservice built with Node.js, Express, PostgreSQL, a
 │ ├── index.js # Main entry point
 │ ├── db.js # PostgreSQL database client
 │ └── ... # Future enhancements
-├── .env # Environment config (not committed)
+├── .env
 ├── .gitignore
 ├── package.json
 └── README.md
@@ -61,10 +61,8 @@ DB_NAME=your_db_name
 node src/index.js
 ```
 
-
 ### 🔌 API
 
-//for Laraval
 POST/notify
 {
   "id": "uuid",
@@ -75,3 +73,11 @@ POST/notify
     "sender_id": 1,
     "message": "Guardian updated - Mudeesha Tharindu"
 }
+
+GET/notifications?user_id=4
+
+PUT/clear-all
+{
+  "user_id": 4
+}
+

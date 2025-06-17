@@ -71,6 +71,75 @@ app.post('/notify', async (req, res) => {
   }
 });
 
+//Get notifications for a user
+app.get('/notifications', async (req, res) => {
+  const userId = req.query.user_id;
+
+  if (!userId) {
+    return res.status(400).json({ error: 'user_id query param is required' });
+  }
+
+  try {
+    const [notifications] = await db.query(
+      'SELECT * FROM notifications WHERE notifiable_id = ? ORDER BY created_at DESC',
+      [userId]
+    );
+
+    res.json(notifications);
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// PUT /notifications/clear-all?user_id=4
+app.put('/notifications/clear-all', async (req, res) => {
+  const userId = req.body.user_id;
+  console.log('Clear notifications for user:', userId);
+
+  if (!userId) {
+      return res.status(400).json({ message: 'Missing user_id' });
+  }
+
+  try {
+      const [result] = await db.query(
+          'UPDATE notifications SET read_at = ? WHERE notifiable_id = ? AND read_at IS NULL',
+          [new Date(), userId]
+      );
+
+      res.json({
+          message: 'All unread notifications marked as read.',
+          affectedRows: result.affectedRows
+      });
+  } catch (err) {
+      console.error('Error clearing notifications:', err);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// src/index.js or routes file
+app.put('/notifications/read/:id', async (req, res) => {
+  const notificationId = req.params.id;
+
+  try {
+    const [result] = await db.query(
+      'UPDATE notifications SET read_at = ? WHERE id = ?',
+      [new Date(), notificationId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
+    return res.json({ message: 'Notification marked as read' });
+  } catch (err) {
+    console.error('Error marking notification as read:', err);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
+
+
 server.listen(process.env.PORT || 4000, () => {
   console.log(`Server running on port ${process.env.PORT || 4000}`);
 });
