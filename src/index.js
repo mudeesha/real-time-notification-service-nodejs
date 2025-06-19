@@ -87,7 +87,18 @@ app.get('/notifications', async (req, res) => {
       [userId]
     );
 
-    res.json(notifications);
+    const parsedNotifications = notifications.map(notification => {
+      if (notification.data) {
+        try {
+          notification.data = JSON.parse(notification.data);
+        } catch (err) {
+          console.error('Error parsing data field:', err);
+        }
+      }
+      return notification;
+    });
+
+    res.json(parsedNotifications);
   } catch (error) {
     console.error('Error fetching notifications:', error);
     res.status(500).json({ error: 'Internal Server Error' });
