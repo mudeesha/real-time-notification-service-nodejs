@@ -41,7 +41,9 @@ io.on('connection', (socket) => {
 });
 
 // Receive notification and broadcast
-app.post('/notification', async (req, res) => {
+app.post('/notifications', async (req, res) => {
+  console.log("hi...");
+  
   try {
     const { id, notifiable_id, notifiable_type, type, data } = req.body;
 
@@ -66,7 +68,7 @@ app.post('/notification', async (req, res) => {
 
     res.status(201).json({ message: 'Notification stored and emitted' });
   } catch (err) {
-    console.error('Notification error:', err);
+    console.error('Notifications error:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -140,6 +142,6 @@ app.put('/notifications/read/:id', async (req, res) => {
 
 
 
-server.listen(process.env.PORT || 4000, () => {
+server.listen(process.env.PORT || 4000, process.env.HOST, () => {
   console.log(`Server running on port ${process.env.PORT || 4000}`);
 });
