@@ -72,6 +72,7 @@ POST/notify
   "data": {
     "sender_id": 1,
     "message": "Guardian updated - Mudeesha Tharindu"
+  }
 }
 
 GET/notifications?user_id=4
