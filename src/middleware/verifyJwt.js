@@ -8,12 +8,16 @@ module.exports = (req, res, next) => {
   }
 
   const token = authHeader.split(' ')[1];
-  const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = decoded; // Attach user to request
+    req.user = {
+      id: decoded.id,
+      name: decoded.name,
+      email: decoded.email,
+    };
+
     next();
   } catch (err) {
     return res.status(401).json({ message: 'Invalid or expired token' });
