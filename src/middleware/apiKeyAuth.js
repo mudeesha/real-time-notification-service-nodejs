@@ -21,6 +21,7 @@ module.exports = async function apiKeyAuth(req, res, next) {
 
     // Attach client info to request for later use
     req.apiClient = rows[0];
+
     next();
   } catch (err) {
     console.error('Notification service interrupted! API key auth error:', err);

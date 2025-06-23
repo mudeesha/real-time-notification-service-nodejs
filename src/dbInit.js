@@ -6,6 +6,7 @@ async function initializeTables() {
     await db.execute(`
       CREATE TABLE IF NOT EXISTS notifications (
         id VARCHAR(36) PRIMARY KEY,
+        client_id INT NOT NULL,
         notifiable_id INT NOT NULL,
         notifiable_type VARCHAR(255) NOT NULL,
         type VARCHAR(255),

@@ -1,8 +1,9 @@
 const db = require('../db');
 const { emitToUser } = require('../sockets/socketHandler');
+const { v4: uuidv4 } = require('uuid');
 
 exports.create = async (req, res) => {
-  const { id, notifiable_id, notifiable_type, type, data } = req.body;
+  const { notifiable_id, notifiable_type, type, data } = req.body;
 
   // Ensure the notifiable_id matches the authenticated user
   if (parseInt(notifiable_id) !== parseInt(req.user.id)) {
@@ -11,13 +12,17 @@ exports.create = async (req, res) => {
   }
 
   try {
+    const clientId = req.apiClient.client_id; 
+    const id = uuidv4();
+
     await db.execute(
-      'INSERT INTO notifications (id, notifiable_id, notifiable_type, type, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [id, notifiable_id, notifiable_type, type, JSON.stringify(data), new Date(), new Date()]
+      'INSERT INTO notifications (id, client_id, notifiable_id, notifiable_type, type, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, clientId, notifiable_id, notifiable_type, type, JSON.stringify(data), new Date(), new Date()]
     );
 
     emitToUser(notifiable_id, 'notification.sent', {
       id,
+      client_id: clientId,
       notifiable_id,
       notifiable_type,
       type,
@@ -38,8 +43,9 @@ exports.create = async (req, res) => {
 };
 
 exports.getAll = async (req, res) => {
-  const userId = req.query.user_id;
+  const userId = parseInt(req.query.user_id);
   const authUserId = parseInt(req.user.id);
+  const clientId = req.apiClient.client_id;
 
   if (!userId || userId !== authUserId) {
     return res.status(403).json({ error: 'Unauthorized access to notifications' });
@@ -47,7 +53,8 @@ exports.getAll = async (req, res) => {
 
   try {
     const [rows] = await db.query(
-      'SELECT * FROM notifications WHERE notifiable_id = ? ORDER BY created_at DESC', [userId]
+      'SELECT * FROM notifications WHERE notifiable_id = ? AND client_id = ? ORDER BY created_at DESC',
+      [userId, clientId]
     );
 
     const parsed = rows.map((n) => {
@@ -57,15 +64,28 @@ exports.getAll = async (req, res) => {
       return n;
     });
 
-    res.json(parsed);
-  } catch {
+    const [unreadResult] = await db.query(
+      'SELECT COUNT(*) AS unread_count FROM notifications WHERE notifiable_id = ? AND read_at IS NULL AND client_id = ?',
+      [userId, clientId]
+    );
+
+    const unreadCount = unreadResult[0]?.unread_count ?? 0;
+
+    res.json({
+      unread_count: unreadCount,
+      notifications: parsed
+    });
+
+  } catch (e) {
+    console.log(e);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
 exports.clearAll = async (req, res) => {
-  const userId = req.body.user_id;
+  const userId = parseInt(req.body.user_id);
   const authUserId = parseInt(req.user.id);
+  const clientId = req.apiClient.client_id;
 
   if (!userId || userId !== authUserId) {
     return res.status(403).json({ message: 'Unauthorized access' });
@@ -75,9 +95,10 @@ exports.clearAll = async (req, res) => {
   
   try {
     const [result] = await db.query(
-      'UPDATE notifications SET read_at = ? WHERE notifiable_id = ? AND read_at IS NULL',
-      [new Date(), userId]
+      'UPDATE notifications SET read_at = ? WHERE notifiable_id = ? AND client_id = ? AND read_at IS NULL',
+      [new Date(), userId, clientId]
     );
+    
     res.json({ 
       message: 'All marked read',
       affectedRows: result.affectedRows 
@@ -90,11 +111,12 @@ exports.clearAll = async (req, res) => {
 exports.markAsRead = async (req, res) => {
   const notificationId = req.params.id;
   const authUserId = parseInt(req.user.id);
+  const clientId = req.apiClient.client_id;
 
   try {
     const [rows] = await db.query(
-      'SELECT * FROM notifications WHERE id = ?',
-      [notificationId]
+      'SELECT * FROM notifications WHERE id = ? AND client_id = ?',
+      [notificationId, clientId]
     );
 
     const notification = rows[0];
@@ -108,12 +130,13 @@ exports.markAsRead = async (req, res) => {
     }
 
     await db.query(
-      'UPDATE notifications SET read_at = ? WHERE id = ?',
-      [new Date(), notificationId]
+      'UPDATE notifications SET read_at = ? WHERE id = ? AND client_id = ?',
+      [new Date(), notificationId, clientId]
     );
 
     res.json({ message: 'Marked as read' });
-  } catch {
+  } catch(e) {
+    console.log(e);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
