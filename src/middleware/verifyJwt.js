@@ -4,7 +4,8 @@ module.exports = (req, res, next) => {
   const authHeader = req.headers['authorization'];
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Missing or invalid Authorization header' });
+    console.log('Notification service interrupted! Missing or invalid Authorization header');
+    return res.status(401).json({ message: 'Notification service interrupted! Missing or invalid Authorization header' });
   }
 
   const token = authHeader.split(' ')[1];
@@ -20,6 +21,7 @@ module.exports = (req, res, next) => {
 
     next();
   } catch (err) {
-    return res.status(401).json({ message: 'Invalid or expired token' });
+    console.log('Notification service interrupted! Invalid or expired token');
+    return res.status(401).json({ message: 'Notification service interrupted! Invalid or expired token' });
   }
 };

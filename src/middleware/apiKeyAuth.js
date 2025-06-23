@@ -4,7 +4,8 @@ module.exports = async function apiKeyAuth(req, res, next) {
   const apiKey = req.headers['x-api-key'];
 
   if (!apiKey) {
-    return res.status(401).json({ message: 'Missing API key' });
+    console.log('Notification service interrupted! Missing API key');
+    return res.status(401).json({ message: 'Notification service interrupted! Missing API key' });
   }
 
   try {
@@ -14,14 +15,15 @@ module.exports = async function apiKeyAuth(req, res, next) {
     );
 
     if (!rows.length) {
-      return res.status(403).json({ message: 'Invalid or inactive API key' });
+      console.log('Notification service interrupted! Invalid or inactive API key');
+      return res.status(403).json({ message: 'Notification service interrupted! Invalid or inactive API key' });
     }
 
     // Attach client info to request for later use
     req.apiClient = rows[0];
     next();
   } catch (err) {
-    console.error('API key auth error:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Notification service interrupted! API key auth error:', err);
+    res.status(500).json({ message: 'Notification service interrupted! Internal server error - API key auth' });
   }
 };

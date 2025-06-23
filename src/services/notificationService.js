@@ -2,12 +2,10 @@ const db = require('../db');
 const { emitToUser } = require('../sockets/socketHandler');
 
 exports.create = async (req, res) => {
-  console.log("in create function");
-  
   const { id, notifiable_id, notifiable_type, type, data } = req.body;
 
-   // Ensure the notifiable_id matches the authenticated user
-   if (parseInt(notifiable_id) !== parseInt(req.user.id)) {
+  // Ensure the notifiable_id matches the authenticated user
+  if (parseInt(notifiable_id) !== parseInt(req.user.id)) {
     console.log('User authentication faield!');
     return res.status(403).json({ message: 'User authentication faield!' });
   }
