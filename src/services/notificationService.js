@@ -26,7 +26,9 @@ exports.create = async (req, res) => {
       notifiable_id,
       notifiable_type,
       type,
-      data
+      data,
+      created_at: new Date(),
+      updated_at: new Date()
     });
 
     console.log("Notification stored and emitted");
