@@ -1,11 +1,16 @@
 const db = require('../db');
-const admin = require('../firebase/firebase');
+const { Expo } = require('expo-server-sdk');
 
 exports.registerToken = async (req, res) => {
-    const { user_id, token, platform = 'android' } = req.body;
+    const { user_id, token, platform = 'expo' } = req.body;
   
-    if (!user_id || !token || !platform) {
+    if (!user_id || !token) {
       return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Validate Expo push token format
+    if (!Expo.isExpoPushToken(token)) {
+      return res.status(400).json({ message: 'Invalid Expo push token format' });
     }
   
     try {
@@ -24,9 +29,9 @@ exports.registerToken = async (req, res) => {
         [user_id, token, platform, now, now]
       );
   
-      res.status(200).json({ message: 'FCM token registered successfully' });
+      res.status(200).json({ message: 'Expo push token registered successfully' });
     } catch (err) {
-      console.error('Error registering FCM token:', err);
+      console.error('Error registering Expo push token:', err);
       res.status(500).json({ message: 'Internal Server Error' });
     }
   };  
@@ -65,29 +70,62 @@ exports.sendNotification = async (req, res) => {
     
         const tokens = rows.map(row => row.token);
         if (!tokens.length) {
-            return res.status(404).json({ error: "No active FCM tokens found for user" });
+            return res.status(404).json({ error: "No active Expo push tokens found for user" });
         }
-    
-        // Create an array of individual messages
-        const messages = tokens.map(token => ({
-            notification: {
+
+        // Create a new Expo SDK client
+        const expo = new Expo({ accessToken: process.env.EXPO_ACCESS_TOKEN });
+        
+        // Create messages array
+        const messages = [];
+        
+        for (let pushToken of tokens) {
+            // Check that all push tokens are valid Expo push tokens
+            if (!Expo.isExpoPushToken(pushToken)) {
+                console.error(`Push token ${pushToken} is not a valid Expo push token`);
+                continue;
+            }
+
+            messages.push({
+                to: pushToken,
+                sound: 'default',
                 title: notification.title,
                 body: notification.body,
-            },
-            data: notification.data || {},
-            token: token
-        }));
-    
-        // Send each message individually
-        const sendPromises = messages.map(message => 
-            admin.messaging().send(message)
-        );
-        
-        const responses = await Promise.all(sendPromises);
-        res.json({ message: "Notifications sent", responses });
+                data: notification.data || {},
+            });
+        }
+
+        // Chunk the messages to send them in batches
+        const chunks = expo.chunkPushNotifications(messages);
+        const tickets = [];
+
+        for (let chunk of chunks) {
+            try {
+                const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+                tickets.push(...ticketChunk);
+            } catch (error) {
+                console.error("Error sending chunk:", error);
+            }
+        }
+
+        // Process the tickets
+        const receiptIds = [];
+        for (let ticket of tickets) {
+            if (ticket.status === "error") {
+                if (ticket.details && ticket.details.error === "DeviceNotRegistered") {
+                    // Handle unregistered device - you might want to remove this token
+                    console.log(`Device not registered for token: ${ticket.details.expoPushToken}`);
+                }
+            }
+            if (ticket.status === "ok") {
+                receiptIds.push(ticket.id);
+            }
+        }
+
+        res.json({ message: "Notifications sent", tickets });
   
     } catch (err) {
-        console.error("FCM Send error:", err);
+        console.error("Expo Push Notification error:", err);
         res.status(500).json({ error: "Internal Server Error" });
     }
 };

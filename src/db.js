@@ -3,11 +3,11 @@ const mysql = require('mysql2/promise');
 
 const requiredEnv = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
 const missing = requiredEnv.filter((key) => !process.env[key]);
-
-if (missing.length > 0) {
-  console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
-  process.exit(1);
-}
+//
+// if (missing.length > 0) {
+//   console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
+//   process.exit(1);
+// }
 
 // Create the MySQL connection pool
 const pool = mysql.createPool({
