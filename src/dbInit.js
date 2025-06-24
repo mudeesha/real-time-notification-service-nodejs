@@ -43,14 +43,15 @@ async function initializeTables() {
 
     // 4. Device Tokens Table
     await db.execute(`
-      CREATE TABLE IF NOT EXISTS device_tokens (
+      CREATE TABLE IF NOT EXISTS user_fcm_tokens (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
         token VARCHAR(512) NOT NULL,
         platform ENUM('android', 'ios') NOT NULL,
         is_active BOOLEAN DEFAULT TRUE,
         created_at DATETIME NOT NULL,
-        updated_at DATETIME NOT NULL
+        updated_at DATETIME NOT NULL,
+        UNIQUE KEY unique_token (token)
       )
     `);
 
