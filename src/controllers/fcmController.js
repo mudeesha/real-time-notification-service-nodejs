@@ -51,41 +51,44 @@ exports.removeToken = async (req, res) => {
 };
 
 exports.sendNotification = async (req, res) => {
-  const { user_id, title, body, data = {} } = req.body;
+    const { userId, notification } = req.body;
 
-  if (!user_id || !title || !body) {
-    return res.status(400).json({ message: 'Missing required fields' });
-  }
-
-  try {
-    const [rows] = await db.query(
-      'SELECT token FROM user_fcm_tokens WHERE user_id = ?',
-      [user_id]
-    );
-
-    const tokens = rows.map(r => r.token);
-
-    if (!tokens.length) {
-      return res.status(404).json({ message: 'No tokens found for user' });
+    if (!userId || !notification || !notification.title || !notification.body) {
+        return res.status(400).json({ error: "Missing userId or notification content" });
     }
-
-    const message = {
-      notification: { title, body },
-      data: data,
-      tokens: tokens
-    };
-
-    const response = await admin.messaging().sendMulticast(message);
-
-    res.json({
-      successCount: response.successCount,
-      failureCount: response.failureCount,
-      responses: response.responses
-    });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Failed to send notification' });
-  }
+  
+    try {
+        const [rows] = await db.query(
+            `SELECT token FROM user_fcm_tokens WHERE user_id = ? AND is_active = TRUE`,
+            [userId]
+        );
+    
+        const tokens = rows.map(row => row.token);
+        if (!tokens.length) {
+            return res.status(404).json({ error: "No active FCM tokens found for user" });
+        }
+    
+        // Create an array of individual messages
+        const messages = tokens.map(token => ({
+            notification: {
+                title: notification.title,
+                body: notification.body,
+            },
+            data: notification.data || {},
+            token: token
+        }));
+    
+        // Send each message individually
+        const sendPromises = messages.map(message => 
+            admin.messaging().send(message)
+        );
+        
+        const responses = await Promise.all(sendPromises);
+        res.json({ message: "Notifications sent", responses });
+  
+    } catch (err) {
+        console.error("FCM Send error:", err);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
 };
 
