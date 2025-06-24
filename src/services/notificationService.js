@@ -1,5 +1,6 @@
 const db = require('../db');
-const { emitToUser } = require('../sockets/socketHandler');
+const { emitToUser, isUserConnected } = require('../sockets/socketHandler');
+const { sendPushNotification } = require('./fcmService'); 
 const { v4: uuidv4 } = require('uuid');
 
 exports.create = async (req, res) => {
@@ -20,16 +21,24 @@ exports.create = async (req, res) => {
       [id, clientId, notifiable_id, notifiable_type, type, JSON.stringify(data), new Date(), new Date()]
     );
 
-    emitToUser(notifiable_id, 'notification.sent', {
+    const payload = {
       id,
       client_id: clientId,
       notifiable_id,
       notifiable_type,
       type,
-      data,
-      created_at: new Date(),
-      updated_at: new Date()
-    });
+      data
+    }
+
+    if (isUserConnected(notifiable_id)) {
+      emitToUser(notifiable_id, 'notification.sent', payload);
+      console.log('📡 Sent via WebSocket');
+    } else {
+      await sendPushNotification(notifiable_id, payload);
+      console.log('📲 Sent via FCM');
+    }
+
+    // emitToUser(notifiable_id, 'notification.sent', payload);
 
     console.log("Notification stored and emitted");
     res.status(201).json({ message: 'Notification stored and emitted' });

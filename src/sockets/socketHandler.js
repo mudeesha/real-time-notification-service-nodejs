@@ -1,4 +1,5 @@
 const userSockets = {};
+const connectedUsers = new Map();
 
 function socketHandler(io) {
   io.on('connection', (socket) => {
@@ -28,7 +29,12 @@ function emitToUser(userId, event, payload) {
   }
 }
 
+function isUserConnected(userId) {
+  return connectedUsers.has(String(userId));
+}
+
 module.exports = {
   socketHandler,
   emitToUser,
+  isUserConnected,
 };
