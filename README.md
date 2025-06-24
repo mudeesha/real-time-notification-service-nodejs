@@ -48,7 +48,7 @@ npm install
 
 ### 3. Configure Environment Variables
 
-PORT=4000
+PORT=4100
 DB_HOST=your_host
 DB_PORT=your_port
 DB_USER=user

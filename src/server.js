@@ -18,8 +18,15 @@ socketHandler(io);
 
 // Run DB init before starting server
 initializeTables().then(() => {
-  const PORT = process.env.PORT || 4000;
-  server.listen(PORT, process.env.HOST, () => {
-    console.log(`Server running on port ${PORT}`);
+  const PORT = process.env.PORT;
+  const HOST = process.env.HOST;
+
+  if (!PORT || !HOST) {
+    console.error('❌ Error: Required environment variables PORT and/or HOST are missing.');
+    process.exit(1);
+  }
+
+  server.listen(PORT, HOST, () => {
+    console.log(`Server running on http://${HOST}:${PORT}`);
   });
 });
