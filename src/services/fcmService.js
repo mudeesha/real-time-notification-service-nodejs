@@ -109,4 +109,14 @@ exports.sendPushNotification = async (userId, notification) => {
   }
 };
 
-
+exports.removeToken = async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ message: 'Token is required' });
+  try {
+    await db.query(`DELETE FROM user_fcm_tokens WHERE token = ?`, [token]);
+    res.json({ message: 'FCM token removed successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error removing FCM token' });
+  }
+};
