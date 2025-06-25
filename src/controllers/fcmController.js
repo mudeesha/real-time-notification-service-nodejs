@@ -2,7 +2,7 @@ const db = require('../db');
 const { Expo } = require('expo-server-sdk');
 
 exports.registerToken = async (req, res) => {
-    const { user_id, token, platform = 'expo' } = req.body;
+    const { user_id, token, platform } = req.body;
   
     if (!user_id || !token) {
       return res.status(400).json({ message: 'Missing required fields' });
