@@ -1,11 +1,11 @@
 const userSockets = {};
-const connectedUsers = new Map();
 
 function socketHandler(io) {
   io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
 
     socket.on('register', (userId) => {
+      if (!userId) return;
       console.log(`User ${userId} registered with socket ${socket.id}`);
       userSockets[userId] = socket;
     });
@@ -13,6 +13,7 @@ function socketHandler(io) {
     socket.on('disconnect', () => {
       for (const userId in userSockets) {
         if (userSockets[userId].id === socket.id) {
+          console.log(`User ${userId} disconnected`);
           delete userSockets[userId];
           break;
         }
@@ -21,7 +22,6 @@ function socketHandler(io) {
   });
 }
 
-// ✅ Export both handler and utility
 function emitToUser(userId, event, payload) {
   const socket = userSockets[userId];
   if (socket) {
@@ -30,7 +30,7 @@ function emitToUser(userId, event, payload) {
 }
 
 function isUserConnected(userId) {
-  return connectedUsers.has(String(userId));
+  return !!userSockets[userId];
 }
 
 module.exports = {
