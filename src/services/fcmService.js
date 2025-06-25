@@ -53,70 +53,55 @@ exports.removeToken = async (req, res) => {
 };
 
 exports.sendPushNotification = async (userId, notification) => {
+  if (!userId || !notification || typeof notification !== 'object') {
+    console.error('Invalid input: Missing or malformed userId or notification');
+    return;
+  }
+
+  const { client_id, notifiable_id } = notification;
+  const messageText =  notification.data.message;
+
+  if (!client_id || !notifiable_id) {
+    console.error('Notification payload missing client_id, notifiable_id');
+    return;
+  }
+
   try {
-    // console.log(notification);
-    // {
-    //   id: '1e2492b3-23d0-4cd3-bf33-e05d43682ff2',
-    //   client_id: 1,
-    //   notifiable_id: 4,
-    //   notifiable_type: 'App\\Models\\User',
-    //   type: 'GuardianUpdated',
-    //   data: { sender_id: 1, message: 'Guardian updated - Prabath Udayanga' }
-    // }
-    
-    
-    const [rows] = await db.query(
-      'SELECT token FROM user_fcm_tokens WHERE user_id = ? AND is_active = TRUE',
+    const [[row]] = await db.query(
+      'SELECT token FROM user_fcm_tokens WHERE user_id = ? AND is_active = TRUE LIMIT 1',
       [userId]
     );
 
-    const tokens = rows.map(row => row.token);
-    if (!tokens.length) {
+    if (!row || !row.token) {
+      console.warn(`No active FCM token found for user ${userId}`);
+      return;
+    }
+
+    const token = row.token;
+    const stringNotification = JSON.stringify(notification);
+
+
+    if (!token.length) {
       console.warn(`No active FCM tokens found for user ${userId}`);
       return;
     }
 
-    const stringifiedData = Object.entries(notification.data || {}).reduce((acc, [key, value]) => {
-      acc[key] = String(value);
-      return acc;
-    }, {});
-
-    // const messages = tokens.map(token => ({
-    //   token: token,
-    //   notification: {
-    //     title: notification.title,
-    //     body: notification.body,
-    //   },
-    //   data: stringifiedData,
-    // }));
-
-    const messages = {
+    const message = {
       notification: {
         title: 'New Message!',
-        body: 'You have a new message from a friend.',
+        body: messageText,
       },
       data: {
-        score: '850',
-        time: '2:45',
-        messageId: '12345',
+        stringNotification
       },
-      token: 'fh2ifQPGQqKzAkS0k3fGBt:APA91bFTuUKVItC52dXTmbYHwwH3JzczhcH1iUawh7-QvS9tVzzK-D_jho-8NSp35SYwp3JWbWaQq0lIPxzKenIjQsdiJG_V3FSd-0YcW97WBieNGGEyuuM',
+      token: token,
     };
     
-    console.log(messages);
-    
+    const response = await admin.messaging().send(message);
+    console.log(`✅ FCM sent to user ${notifiable_id}:`, response);
 
-    const sendResults = await Promise.all(
-      // messages.map(msg => admin.messaging().send(msg))
-      admin.messaging().send(messages)
-      .then((response) => {
-        console.log('Successfully sent message:', response);
-      })
-    );
-
-    console.log(`✅ FCM sent to user ${userId}:`, sendResults);
   } catch (err) {
-    console.error(`❌ Error sending FCM to user ${userId}:`, err);
+    console.error(`❌ Error sending FCM to user ${reciverId}:`, err);
   }
 };
 
