@@ -32,25 +32,20 @@ exports.registerToken = async (req, res) => {
   };  
   
   
-exports.removeToken = async (req, res) => {
-    const { token } = req.body;
-    const userId = req.user.id;
+exports.deactivateToken = async (token) => {
+  if (!token) return;
 
-    if (!user_id || !token) {
-        return res.status(400).json({ message: 'Missing user_id or token' });
-    }
-
-    try {
-        await db.execute(
-        `DELETE FROM user_fcm_tokens WHERE user_id = ? AND token = ?`,
-        [userId, token]
-        );
-        res.json({ message: 'FCM token removed successfully' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Error removing FCM token' });
-    }
+  try {
+    await db.query(
+      'UPDATE user_fcm_tokens SET is_active = FALSE WHERE token = ?',
+      [token]
+    );
+    console.warn(`🗑️ Invalid FCM token marked inactive: ${token}`);
+  } catch (error) {
+    console.error(`⚠️ Failed to deactivate token ${token}:`, error.message);
+  }
 };
+
 
 exports.sendPushNotification = async (userId, notification) => {
   if (!userId || !notification || typeof notification !== 'object') {
@@ -58,50 +53,59 @@ exports.sendPushNotification = async (userId, notification) => {
     return;
   }
 
-  const { client_id, notifiable_id } = notification;
-  const messageText =  notification.data.message;
-
-  if (!client_id || !notifiable_id) {
-    console.error('Notification payload missing client_id, notifiable_id');
-    return;
-  }
+  // const { client_id, notifiable_id } = notification;
+  const messageText = notification?.data?.message;
 
   try {
-    const [[row]] = await db.query(
-      'SELECT token FROM user_fcm_tokens WHERE user_id = ? AND is_active = TRUE LIMIT 1',
+    const [rows] = await db.query(
+      'SELECT token FROM user_fcm_tokens WHERE user_id = ? AND is_active = TRUE',
       [userId]
     );
 
-    if (!row || !row.token) {
-      console.warn(`No active FCM token found for user ${userId}`);
-      return;
-    }
+    const tokens = rows.map(row => row.token).filter(Boolean);
 
-    const token = row.token;
-    const stringNotification = JSON.stringify(notification);
-
-
-    if (!token.length) {
+    if (!tokens.length) {
       console.warn(`No active FCM tokens found for user ${userId}`);
       return;
     }
 
-    const message = {
+    const messages = tokens.map(token => ({
+      token,
       notification: {
         title: 'New Message!',
-        body: messageText,
+        body: messageText || 'You have a new notification',
       },
       data: {
-        stringNotification
+        url: notification?.data?.url || '/notifications',
+        type: notification?.type || 'default',
       },
-      token: token,
-    };
-    
-    const response = await admin.messaging().send(message);
-    console.log(`✅ FCM sent to user ${notifiable_id}:`, response);
+    }));
+
+    const responses = await Promise.allSettled(
+      messages.map(msg => admin.messaging().send(msg))
+    );
+
+    for (let i = 0; i < responses.length; i++) {
+      const result = responses[i];
+      const token = tokens[i];
+
+      if (result.status === 'fulfilled') {
+        console.log(`✅ Notification sent to ${token}: ${result.value}`);
+      } else {
+        console.error(`Failed to send to ${token}:`, result.reason?.message);
+
+        const code = result.reason?.errorInfo?.code;
+        if (
+          code === 'messaging/invalid-registration-token' ||
+          code === 'messaging/registration-token-not-registered'
+        ) {
+          await deactivateToken(token);
+        }
+      }
+    }
 
   } catch (err) {
-    console.error(`❌ Error sending FCM to user ${notifiable_id}:`, err);
+    console.error(`Unexpected error sending FCM to user ${userId}:`, err);
   }
 };
 
