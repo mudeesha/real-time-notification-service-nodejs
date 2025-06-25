@@ -101,7 +101,7 @@ exports.sendPushNotification = async (userId, notification) => {
     console.log(`✅ FCM sent to user ${notifiable_id}:`, response);
 
   } catch (err) {
-    console.error(`❌ Error sending FCM to user ${reciverId}:`, err);
+    console.error(`❌ Error sending FCM to user ${notifiable_id}:`, err);
   }
 };
 
