@@ -54,6 +54,17 @@ exports.removeToken = async (req, res) => {
 
 exports.sendPushNotification = async (userId, notification) => {
   try {
+    // console.log(notification);
+    // {
+    //   id: '1e2492b3-23d0-4cd3-bf33-e05d43682ff2',
+    //   client_id: 1,
+    //   notifiable_id: 4,
+    //   notifiable_type: 'App\\Models\\User',
+    //   type: 'GuardianUpdated',
+    //   data: { sender_id: 1, message: 'Guardian updated - Prabath Udayanga' }
+    // }
+    
+    
     const [rows] = await db.query(
       'SELECT token FROM user_fcm_tokens WHERE user_id = ? AND is_active = TRUE',
       [userId]
@@ -70,17 +81,37 @@ exports.sendPushNotification = async (userId, notification) => {
       return acc;
     }, {});
 
-    const messages = tokens.map(token => ({
-      token,
+    // const messages = tokens.map(token => ({
+    //   token: token,
+    //   notification: {
+    //     title: notification.title,
+    //     body: notification.body,
+    //   },
+    //   data: stringifiedData,
+    // }));
+
+    const messages = {
       notification: {
-        title: notification.title,
-        body: notification.body,
+        title: 'New Message!',
+        body: 'You have a new message from a friend.',
       },
-      data: stringifiedData,
-    }));
+      data: {
+        score: '850',
+        time: '2:45',
+        messageId: '12345',
+      },
+      token: 'fh2ifQPGQqKzAkS0k3fGBt:APA91bFTuUKVItC52dXTmbYHwwH3JzczhcH1iUawh7-QvS9tVzzK-D_jho-8NSp35SYwp3JWbWaQq0lIPxzKenIjQsdiJG_V3FSd-0YcW97WBieNGGEyuuM',
+    };
+    
+    console.log(messages);
+    
 
     const sendResults = await Promise.all(
-      messages.map(msg => admin.messaging().send(msg))
+      // messages.map(msg => admin.messaging().send(msg))
+      admin.messaging().send(messages)
+      .then((response) => {
+        console.log('Successfully sent message:', response);
+      })
     );
 
     console.log(`✅ FCM sent to user ${userId}:`, sendResults);

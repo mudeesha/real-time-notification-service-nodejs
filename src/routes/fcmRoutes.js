@@ -4,7 +4,7 @@ const fcmController = require('../controllers/fcmController');
 
 router.post('/register', fcmController.registerToken);
 router.post('/remove', fcmController.removeToken);
-// router.post('/send', fcmController.sendNotification);
+router.post('/send', fcmController.sendPushNotification);
 
 module.exports = router;
 
