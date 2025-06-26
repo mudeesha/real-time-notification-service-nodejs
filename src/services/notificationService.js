@@ -84,6 +84,20 @@ exports.getAll = async (req, res) => {
       return n;
     });
 
+    const today = new Date().toISOString().slice(0, 10);
+
+    const todayNotifications = [];
+    const olderNotifications = [];
+
+    parsed.forEach(n => {
+      const createdAtDate = new Date(n.created_at).toISOString().slice(0, 10);
+      if (createdAtDate === today) {
+        todayNotifications.push(n);
+      } else {
+        olderNotifications.push(n);
+      }
+    });
+
     const [unreadResult] = await db.query(
       'SELECT COUNT(*) AS unread_count FROM notifications WHERE notifiable_id = ? AND read_at IS NULL AND client_id = ?',
       [userId, clientId]
@@ -94,7 +108,10 @@ exports.getAll = async (req, res) => {
 
     res.json({
       unread_count: unreadCount,
-      notifications: parsed,
+      notifications: {
+        today: todayNotifications,
+        older: olderNotifications
+      },
       meta: {
         page,
         per_page: limit,
@@ -107,7 +124,6 @@ exports.getAll = async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
-
 
 exports.clearAll = async (req, res) => {
   const userId = parseInt(req.body.user_id);
