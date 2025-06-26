@@ -58,14 +58,23 @@ exports.getAll = async (req, res) => {
   const authUserId = parseInt(req.user.id);
   const clientId = req.apiClient.client_id;
 
+  const limit = parseInt(req.query.limit) || 10;
+  const page = parseInt(req.query.page) || 1;
+  const offset = (page - 1) * limit;
+
   if (!userId || userId !== authUserId) {
     return res.status(403).json({ error: 'Unauthorized access to notifications' });
   }
 
   try {
-    const [rows] = await db.query(
-      'SELECT * FROM notifications WHERE notifiable_id = ? AND client_id = ? ORDER BY created_at DESC',
+    const [[{ total_count }]] = await db.query(
+      'SELECT COUNT(*) AS total_count FROM notifications WHERE notifiable_id = ? AND client_id = ?',
       [userId, clientId]
+    );
+
+    const [rows] = await db.query(
+      'SELECT * FROM notifications WHERE notifiable_id = ? AND client_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+      [userId, clientId, limit, offset]
     );
 
     const parsed = rows.map((n) => {
@@ -81,17 +90,24 @@ exports.getAll = async (req, res) => {
     );
 
     const unreadCount = unreadResult[0]?.unread_count ?? 0;
+    const lastPage = Math.ceil(total_count / limit);
 
     res.json({
       unread_count: unreadCount,
-      notifications: parsed
+      notifications: parsed,
+      meta: {
+        page,
+        per_page: limit,
+        total: total_count,
+        last_page: lastPage
+      }
     });
-
   } catch (e) {
     console.log(e);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
 
 exports.clearAll = async (req, res) => {
   const userId = parseInt(req.body.user_id);
